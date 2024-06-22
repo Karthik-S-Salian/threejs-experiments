@@ -1,0 +1,173 @@
+---
+import Layout from "@layouts/Layout.astro";
+---
+
+<!-- https://franky-arkon-digital.medium.com/make-your-own-earth-in-three-js-8b875e281b1e -->
+<Layout title="earth" />
+
+<script>
+    import earthTexture from "@assets/earth/land_ocean_ice_8192.png";
+    import nightTexture from "@assets/earth/earth_lights.gif";
+    import oceanMap from "@assets/earth/earthspec1k.jpg";
+    import starBackground from "@assets/earth/bg_perfect.png";
+    import bumpTexture from "@assets/earth/gebco_08_rev_elev_21600x10800.png";
+    import cloudTexture from "@assets/earth/cloud_combined_2048.jpg";
+    import * as THREE from "three";
+    import fragmentShader from "./_fragment.glsl?raw";
+    import vertexShader from "./_vertex.glsl?raw";
+    import { OrbitControls } from "three/examples/jsm/Addons.js";
+
+    const canvas = document.querySelector<HTMLCanvasElement>("canvas")!;
+
+    if (!canvas) {
+        throw new Error("Canvas not found");
+    }
+
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+
+    const renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: true,
+    });
+
+    renderer.setSize(w, h);
+
+    const camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 10);
+    camera.position.z = 2;
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.03;
+
+    const scene = new THREE.Scene();
+    const loader = new THREE.TextureLoader();
+
+    const bg = loader.load(starBackground.src);
+    bg.mapping = THREE.EquirectangularReflectionMapping;
+    scene.background = bg;
+
+    const earthGroup = new THREE.Group();
+
+    const earth = new THREE.SphereGeometry(1, 64, 64);
+    const mat = new THREE.MeshStandardMaterial({
+        map: loader.load(earthTexture.src),
+        bumpMap: loader.load(bumpTexture.src),
+        bumpScale: 0.1,
+        roughness: 0.7,
+        roughnessMap: loader.load(oceanMap.src),
+        metalness: 0.3,
+        metalnessMap: loader.load(oceanMap.src),
+        emissive: new THREE.Color(0xffff88),
+        emissiveMap: loader.load(nightTexture.src),
+    });
+
+    let atmosMat = new THREE.ShaderMaterial({
+        vertexShader: vertexShader,
+        fragmentShader: fragmentShader,
+        uniforms: {
+            atmOpacity: { value: 0.7 },
+            atmPowFactor: { value: 4.1 },
+            atmMultiplier: { value: 9.5 },
+        },
+        blending: THREE.AdditiveBlending,
+        side: THREE.BackSide,
+    });
+
+    mat.onBeforeCompile = (shader) => {
+        shader.uniforms.tClouds = { value: loader.load(cloudTexture.src) };
+        shader.uniforms.tClouds.value.wrapS = THREE.RepeatWrapping;
+        shader.uniforms.uv_xOffset = { value: 0 };
+
+        shader.fragmentShader = shader.fragmentShader.replace(
+            "#include <common>",
+            `
+                #include <common>
+                uniform sampler2D tClouds;
+                uniform float uv_xOffset;
+            `,
+        );
+
+        console.log(shader.fragmentShader);
+
+        shader.fragmentShader = shader.fragmentShader.replace(
+            "#include <emissivemap_fragment>",
+            `
+             #ifdef USE_EMISSIVEMAP
+                vec4 emissiveColor = texture2D( emissiveMap, vEmissiveMapUv );
+                emissiveColor *= 1.0 - smoothstep(-0.02, 0.0, dot(normal, directionalLights[0].direction));
+                totalEmissiveRadiance *= emissiveColor.rgb;
+            #endif
+
+            // #include <emissivemap_fragment>
+            float cloudsMapValue = texture2D(tClouds, vec2(vMapUv.x - uv_xOffset, vMapUv.y)).r;
+            diffuseColor.rgb *= max(1.0 - cloudsMapValue, 0.2 );
+
+            float intensity = 1.4 - dot( normal, vec3( 0.0, 0.0, 1.0 ) );
+            vec3 atmosphere = vec3( 0.3, 0.6, 1.0 ) * pow(intensity, 5.0);
+ 
+            diffuseColor.rgb += atmosphere;
+        `,
+        );
+
+        shader.fragmentShader = shader.fragmentShader.replace(
+            "#include <roughnessmap_fragment>",
+            `
+            float roughnessFactor = roughness;
+
+            #ifdef USE_ROUGHNESSMAP
+
+            vec4 texelRoughness = texture2D( roughnessMap, vRoughnessMapUv );
+            // reversing the black and white values because we provide the ocean map
+            texelRoughness = vec4(1.0) - texelRoughness;
+
+            // reads channel G, compatible with a combined OcclusionRoughnessMetallic (RGB) texture
+            roughnessFactor *= clamp(texelRoughness.g, 0.5, 1.0);
+
+            #endif
+      `,
+        );
+        mat.userData.shader = shader;
+    };
+
+    const cloudMesh = new THREE.Mesh(
+        earth,
+        new THREE.MeshStandardMaterial({
+            alphaMap: loader.load(cloudTexture.src),
+            transparent: true,
+        }),
+    );
+
+    const atmMesh = new THREE.Mesh(earth, atmosMat);
+
+    const mesh = new THREE.Mesh(earth, mat);
+    cloudMesh.scale.setScalar(1.002);
+    atmMesh.scale.setScalar(1.2);
+    // mesh.add(cloudMesh);
+    earthGroup.add(mesh);
+    earthGroup.add(cloudMesh);
+    earthGroup.add(atmMesh);
+    earthGroup.rotation.z = (-23.4 * Math.PI) / 180;
+    scene.add(earthGroup);
+
+    const sunLight = new THREE.DirectionalLight(0xffffff, 1.8);
+    sunLight.position.set(-50, 0, 30);
+    scene.add(sunLight);
+
+    function animate(t = 0) {
+        mesh.rotation.y = t * 0.0001;
+        cloudMesh.rotation.y = mesh.rotation.y * 1.3;
+
+        const shader = mesh.material.userData.shader;
+        if (shader) {
+            let offset =
+                (cloudMesh.rotation.y - mesh.rotation.y) / (2 * Math.PI);
+            shader.uniforms.uv_xOffset.value = offset - 0.004;
+        }
+        controls.update();
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+    }
+
+    animate();
+</script>

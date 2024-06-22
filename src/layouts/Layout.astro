@@ -22,6 +22,7 @@ const { title } = Astro.props;
 		<Navbar />
 		<main>
 			<slot />
+			<canvas></canvas>
 		</main>
 	</body>
 </html>
@@ -47,7 +48,7 @@ const { title } = Astro.props;
 		max-width: 100%;
 		min-height: 100vh;
 		background-color: var(--primary);
-		color:var(--color);
+		color: var(--color);
 		padding: 0;
 		margin: 0;
 		display: flex;
@@ -55,12 +56,21 @@ const { title } = Astro.props;
 
 	main {
 		flex-grow: 1;
-		padding: 1rem;
+		padding: 0;
 	}
 
 	a,
 	a:visited {
 		color: color-mix(in srgb, var(--color) 80%, var(--action));
 		text-decoration: inherit;
+	}
+
+	canvas {
+		padding: 0;
+		display: block;
+		margin: auto;
+		width: 100%;
+		height: 100%;
+		background-color: beige;
 	}
 </style>
