@@ -1,12 +1,15 @@
-
+---
+import { links } from "@lib/constants"
+---
 <aside>
     <h1><a href="/">ThreeJS Experiments</a></h1>
     
     <hr >
     <section>
-        <h3>Earth</h3>
         <ul>
-            <li><a href="/earth">Earth</a></li>
+            {links.map(link=>(
+                <li><a href={link.url}>{link.name}</a></li>
+            ))}
         </ul>
     </section>
     <hr>
@@ -24,5 +27,11 @@
         position: sticky;
         top: 0%;
         left: 0%;
+    }
+
+    ul{
+        display: flex;
+        flex-direction: column;
+        gap:1rem;
     }
 </style>
