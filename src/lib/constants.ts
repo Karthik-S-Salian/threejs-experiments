@@ -4,4 +4,8 @@ export const links = [{
 }, {
     "name": "tunnel",
     "url": "/tunnel",
+},
+{
+    "name": "spotlight",
+    "url": "/spotlight",
 }]
