@@ -8,4 +8,8 @@ export const links = [{
 {
     "name": "spotlight",
     "url": "/spotlight",
+},
+{
+    "name": "instanced texture",
+    "url": "/instanced-texture",
 }]
