@@ -12,4 +12,8 @@ export const links = [{
 {
     "name": "instanced texture",
     "url": "/instanced-texture",
+},
+{
+    "name": "3d model",
+    "url": "/3d-model",
 }]
