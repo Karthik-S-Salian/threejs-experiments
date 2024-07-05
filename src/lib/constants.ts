@@ -16,4 +16,7 @@ export const links = [{
 {
     "name": "3d model",
     "url": "/3d-model",
+},{
+    "name":"ascii art",
+    "url":"ascii-art"
 }]
