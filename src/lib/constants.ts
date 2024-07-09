@@ -19,4 +19,8 @@ export const links = [{
 },{
     "name":"ascii art",
     "url":"ascii-art"
+},
+,{
+    "name":"ascii art instanced",
+    "url":"ascii-art-instanced"
 }]
