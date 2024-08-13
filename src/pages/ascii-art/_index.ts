@@ -65,7 +65,7 @@ const loader = new TTFLoader();
 const font = new Font(await loader.loadAsync(fontUrl));
 
 const size = 80;
-const text = "FiniteLoop"
+const text = "Karthik"
 const textGeo = new TextGeometry(text, {
     font: font,
     size: size,

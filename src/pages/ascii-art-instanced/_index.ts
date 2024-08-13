@@ -110,6 +110,7 @@ function next(aspect: number) {
 
     }
 
+    //  video.requestVideoFrameCallback not supported by firefox
     video.requestVideoFrameCallback(computeScale)
 
     function animate(t = 0) {
